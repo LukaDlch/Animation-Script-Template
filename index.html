@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -716,10 +716,29 @@
             color: var(--text-muted);
         }
 
+        .price-estimate-wrapper {
+            text-align: right;
+        }
+
+        .price-estimate-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
         .price-value {
-            font-size: 32px;
-            font-weight: 600;
+            font-size: 28px;
+            font-weight: 300;
             color: var(--accent);
+            letter-spacing: -0.5px;
+        }
+
+        .price-value .estimate-symbol {
+            font-size: 18px;
+            opacity: 0.7;
+            margin-right: 2px;
         }
 
         /* Generate Button */
@@ -960,7 +979,10 @@
                 <div class="price-calc">
                     <span id="priceCalc">0.0s × $17.50/s</span>
                 </div>
-                <div class="price-value" id="priceValue">$0.00</div>
+                <div class="price-estimate-wrapper">
+                    <div class="price-estimate-label">Estimated Price</div>
+                    <div class="price-value"><span class="estimate-symbol">±</span><span id="priceValue">$0.00</span></div>
+                </div>
             </div>
         </div>
 
@@ -1308,6 +1330,9 @@
         document.getElementById('generateBtn').addEventListener('click', generatePDF);
 
         function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
             const projectName = document.getElementById('projectName').value || 'Untitled Project';
             const projectGoal = document.getElementById('projectGoal').value || 'Not specified';
             const referenceLinks = document.getElementById('referenceLinks').value;
@@ -1319,161 +1344,241 @@
             }
             const totalPrice = totalSeconds * RATE_PER_SECOND;
             
-            // Get accent color based on company
-            const accentColor = selectedCompany === 'Alta' ? '#7C81FA' : '#DCCE9E';
-            const accentLight = selectedCompany === 'Alta' ? 'rgba(124, 129, 250, 0.1)' : 'rgba(220, 206, 158, 0.15)';
-
-            const content = document.createElement('div');
-            content.style.cssText = 'font-family: "Segoe UI", Arial, sans-serif; padding: 0; color: #333; max-width: 100%;';
+            // Colors
+            const accentColor = selectedCompany === 'Alta' ? [124, 129, 250] : [220, 206, 158];
+            const darkGray = [51, 51, 51];
+            const midGray = [136, 136, 136];
+            const lightGray = [153, 153, 153];
             
-            content.innerHTML = `
-                <!-- Header -->
-                <div style="background: #0d0d0d; color: white; padding: 32px 40px; margin: -10mm -10mm 0 -10mm;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: ${accentColor}; margin-bottom: 8px;">Animation Brief</div>
-                            <h1 style="font-size: 28px; font-weight: 600; margin: 0 0 4px 0;">${projectName}</h1>
-                            <div style="font-size: 13px; color: #888;">${selectedCompany} • ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Estimated</div>
-                            <div style="font-size: 32px; font-weight: 600; color: ${accentColor};">$${totalPrice.toFixed(2)}</div>
-                            <div style="font-size: 12px; color: #888;">${totalSeconds.toFixed(1)}s × $${RATE_PER_SECOND.toFixed(2)}/s</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Overview Section -->
-                <div style="padding: 32px 40px; margin: 0 -10mm; background: #fafafa; border-bottom: 1px solid #eee;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 24px;">
-                        <div>
-                            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px;">Format</div>
-                            <div style="font-size: 14px; font-weight: 500; color: #333;">${formatNames[selectedFormat]}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px;">Duration</div>
-                            <div style="font-size: 14px; font-weight: 500; color: #333;">${totalSeconds.toFixed(1)} seconds</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px;">Animation Feel</div>
-                            <div style="font-size: 14px; font-weight: 500; color: #333;">${easingNames[selectedEasing]}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px;">Segments</div>
-                            <div style="font-size: 14px; font-weight: 500; color: #333;">${segments.length}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Main Content -->
-                <div style="padding: 32px 40px; margin: 0 -10mm;">
+            const pageWidth = 210;
+            const margin = 20;
+            const contentWidth = pageWidth - (margin * 2);
+            let y = margin;
+            
+            // Helper functions
+            const setColor = (rgb) => doc.setTextColor(rgb[0], rgb[1], rgb[2]);
+            const setFillColor = (rgb) => doc.setFillColor(rgb[0], rgb[1], rgb[2]);
+            
+            // Header
+            doc.setFontSize(10);
+            setColor(accentColor);
+            doc.text('ANIMATION BRIEF', margin, y);
+            y += 8;
+            
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            setColor(darkGray);
+            doc.text(projectName, margin, y);
+            
+            // Price on right - smaller and lighter
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            setColor(midGray);
+            doc.text('Estimate', pageWidth - margin, y - 5, { align: 'right' });
+            doc.setFontSize(16);
+            setColor(lightGray);
+            doc.text('± $' + totalPrice.toFixed(2), pageWidth - margin, y + 2, { align: 'right' });
+            
+            y += 6;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            setColor(midGray);
+            doc.text(selectedCompany + ' • ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), margin, y);
+            doc.setFontSize(9);
+            doc.text(totalSeconds.toFixed(1) + 's × $' + RATE_PER_SECOND.toFixed(2) + '/s', pageWidth - margin, y, { align: 'right' });
+            
+            y += 12;
+            
+            // Divider
+            setFillColor([238, 238, 238]);
+            doc.rect(margin, y, contentWidth, 0.5, 'F');
+            y += 8;
+            
+            // Overview boxes
+            const boxWidth = contentWidth / 4;
+            const boxes = [
+                { label: 'FORMAT', value: formatNames[selectedFormat] },
+                { label: 'DURATION', value: totalSeconds.toFixed(1) + 's' },
+                { label: 'FEEL', value: easingNames[selectedEasing] },
+                { label: 'SEGMENTS', value: segments.length.toString() }
+            ];
+            
+            setFillColor([247, 247, 247]);
+            doc.rect(margin, y, contentWidth, 18, 'F');
+            
+            boxes.forEach((box, i) => {
+                const x = margin + (i * boxWidth) + 5;
+                doc.setFontSize(8);
+                setColor(lightGray);
+                doc.text(box.label, x, y + 6);
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                setColor(darkGray);
+                doc.text(box.value, x, y + 13);
+            });
+            doc.setFont('helvetica', 'normal');
+            
+            y += 26;
+            
+            // Goal section
+            doc.setFontSize(9);
+            setColor(lightGray);
+            doc.text('GOAL', margin, y);
+            y += 5;
+            
+            setFillColor([249, 249, 249]);
+            doc.rect(margin, y, contentWidth, 20, 'F');
+            setFillColor(accentColor);
+            doc.rect(margin, y, 1, 20, 'F');
+            
+            doc.setFontSize(10);
+            setColor(darkGray);
+            const goalLines = doc.splitTextToSize(projectGoal, contentWidth - 10);
+            doc.text(goalLines.slice(0, 3), margin + 5, y + 6);
+            
+            y += 28;
+            
+            // Mood
+            if (selectedMoods.length > 0) {
+                doc.setFontSize(9);
+                setColor(lightGray);
+                doc.text('MOOD & TONE', margin, y);
+                y += 5;
+                doc.setFontSize(10);
+                setColor([85, 85, 85]);
+                doc.text(selectedMoods.join(' • '), margin, y);
+                y += 10;
+            }
+            
+            // Timeline
+            if (segments.length > 0 && totalSeconds > 0) {
+                doc.setFontSize(9);
+                setColor(lightGray);
+                doc.text('TIMELINE', margin, y);
+                y += 5;
+                
+                let xPos = margin;
+                segments.forEach((seg, i) => {
+                    const segWidth = ((seg.endTime - seg.startTime) / totalSeconds) * contentWidth;
+                    setFillColor(accentColor);
+                    doc.rect(xPos, y, segWidth - 1, 12, 'F');
                     
-                    <!-- Goal -->
-                    <div style="margin-bottom: 32px;">
-                        <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin: 0 0 12px 0; font-weight: 600;">Goal</h2>
-                        <p style="font-size: 14px; line-height: 1.6; color: #333; margin: 0; padding: 16px; background: ${accentLight}; border-radius: 8px; border-left: 3px solid ${accentColor};">${projectGoal}</p>
-                    </div>
-
-                    <!-- Mood -->
-                    ${selectedMoods.length > 0 ? `
-                    <div style="margin-bottom: 32px;">
-                        <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin: 0 0 12px 0; font-weight: 600;">Mood & Tone</h2>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            ${selectedMoods.map(mood => `<span style="display: inline-block; padding: 6px 14px; background: #f0f0f0; border-radius: 20px; font-size: 12px; color: #555;">${mood}</span>`).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-
-                    <!-- Timeline Visualization -->
-                    <div style="margin-bottom: 32px;">
-                        <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin: 0 0 16px 0; font-weight: 600;">Timeline</h2>
-                        <div style="background: #f5f5f5; border-radius: 8px; padding: 20px;">
-                            <div style="display: flex; height: 40px; border-radius: 6px; overflow: hidden; background: #e0e0e0;">
-                                ${segments.map((seg, i) => {
-                                    const width = ((seg.endTime - seg.startTime) / totalSeconds) * 100;
-                                    const opacity = 1 - (i * 0.15);
-                                    return `<div style="width: ${width}%; background: ${accentColor}; opacity: ${opacity}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: ${selectedCompany === 'Alta' ? 'white' : '#333'}; border-right: 2px solid white;">${seg.name || 'Seg ' + (i + 1)}</div>`;
-                                }).join('')}
-                            </div>
-                            <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 10px; color: #999;">
-                                <span>0s</span>
-                                <span>${totalSeconds.toFixed(1)}s</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Segments Detail -->
-                    <div style="margin-bottom: 32px;">
-                        <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin: 0 0 16px 0; font-weight: 600;">Segment Details</h2>
-                        ${segments.length === 0 ? '<p style="font-size: 13px; color: #999;">No segments defined</p>' : segments.map((seg, i) => `
-                            <div style="margin-bottom: 16px; padding: 20px; background: white; border: 1px solid #e5e5e5; border-radius: 8px; border-left: 4px solid ${accentColor};">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <div style="font-size: 15px; font-weight: 600; color: #333;">
-                                        ${seg.name || 'Segment ' + (i + 1)}
-                                    </div>
-                                    <div style="font-size: 12px; color: #666; background: #f5f5f5; padding: 4px 10px; border-radius: 4px;">
-                                        ${seg.startTime.toFixed(1)}s – ${seg.endTime.toFixed(1)}s
-                                        <span style="color: ${accentColor}; font-weight: 600; margin-left: 6px;">${(seg.endTime - seg.startTime).toFixed(1)}s</span>
-                                    </div>
-                                </div>
-                                ${seg.copy ? `
-                                <div style="margin-bottom: 12px;">
-                                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px;">On-Screen Copy</div>
-                                    <div style="font-size: 13px; color: #333; line-height: 1.5; padding: 12px; background: #fafafa; border-radius: 6px;">"${seg.copy}"</div>
-                                </div>
-                                ` : ''}
-                                ${seg.visualDescription ? `
-                                <div>
-                                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin-bottom: 6px;">Visual Description</div>
-                                    <div style="font-size: 13px; color: #555; line-height: 1.5;">${seg.visualDescription}</div>
-                                </div>
-                                ` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-
-                    <!-- References -->
-                    ${(uploadedFiles.length > 0 || referenceLinks) ? `
-                    <div style="margin-bottom: 32px;">
-                        <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #999; margin: 0 0 12px 0; font-weight: 600;">References</h2>
-                        ${uploadedFiles.length > 0 ? `
-                        <div style="margin-bottom: 12px;">
-                            <div style="font-size: 11px; color: #666; margin-bottom: 6px;">Attached Files:</div>
-                            <div style="font-size: 13px; color: #333;">${uploadedFiles.map(f => f.name).join(', ')}</div>
-                        </div>
-                        ` : ''}
-                        ${referenceLinks ? `
-                        <div>
-                            <div style="font-size: 11px; color: #666; margin-bottom: 6px;">Reference Links:</div>
-                            <div style="font-size: 12px; color: #555; white-space: pre-wrap; background: #f5f5f5; padding: 12px; border-radius: 6px; word-break: break-all;">${referenceLinks}</div>
-                        </div>
-                        ` : ''}
-                    </div>
-                    ` : ''}
-
-                </div>
-
-                <!-- Footer -->
-                <div style="background: #0d0d0d; color: white; padding: 24px 40px; margin: 0 -10mm -10mm -10mm;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="font-size: 12px; color: #666;">
-                            Generated by <span style="color: ${accentColor};">Principle</span>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-size: 11px; color: #666;">Total Estimate</div>
-                            <div style="font-size: 20px; font-weight: 600; color: ${accentColor};">$${totalPrice.toFixed(2)}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            html2pdf().set({
-                margin: 10,
-                filename: `${projectName.replace(/[^a-z0-9]/gi, '_')}_brief.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            }).from(content).save();
+                    doc.setFontSize(7);
+                    doc.setFont('helvetica', 'bold');
+                    setColor([51, 51, 51]);
+                    const segName = seg.name || 'Seg ' + (i + 1);
+                    doc.text(segName, xPos + segWidth/2, y + 5, { align: 'center' });
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(6);
+                    doc.text((seg.endTime - seg.startTime).toFixed(1) + 's', xPos + segWidth/2, y + 9, { align: 'center' });
+                    
+                    xPos += segWidth;
+                });
+                
+                y += 14;
+                doc.setFontSize(8);
+                setColor(lightGray);
+                doc.text('0s', margin, y);
+                doc.text(totalSeconds.toFixed(1) + 's', pageWidth - margin, y, { align: 'right' });
+                y += 10;
+            }
+            
+            // Segment details
+            doc.setFontSize(9);
+            setColor(lightGray);
+            doc.text('SEGMENT DETAILS', margin, y);
+            y += 6;
+            
+            segments.forEach((seg, i) => {
+                // Check if we need a new page
+                if (y > 260) {
+                    doc.addPage();
+                    y = margin;
+                }
+                
+                const segHeight = 25 + (seg.copy ? 15 : 0) + (seg.visualDescription ? 15 : 0);
+                
+                // Border
+                doc.setDrawColor(229, 229, 229);
+                doc.rect(margin, y, contentWidth, segHeight);
+                setFillColor(accentColor);
+                doc.rect(margin, y, 1.5, segHeight, 'F');
+                
+                // Segment header
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                setColor(darkGray);
+                doc.text(seg.name || 'Segment ' + (i + 1), margin + 5, y + 7);
+                
+                doc.setFontSize(9);
+                doc.setFont('helvetica', 'normal');
+                setColor(midGray);
+                const timeText = seg.startTime.toFixed(1) + 's – ' + seg.endTime.toFixed(1) + 's (' + (seg.endTime - seg.startTime).toFixed(1) + 's)';
+                doc.text(timeText, pageWidth - margin - 5, y + 7, { align: 'right' });
+                
+                let innerY = y + 14;
+                
+                if (seg.copy) {
+                    doc.setFontSize(7);
+                    setColor(lightGray);
+                    doc.text('ON-SCREEN COPY', margin + 5, innerY);
+                    innerY += 4;
+                    doc.setFontSize(9);
+                    setColor(darkGray);
+                    const copyLines = doc.splitTextToSize('"' + seg.copy + '"', contentWidth - 15);
+                    doc.text(copyLines.slice(0, 2), margin + 5, innerY);
+                    innerY += 10;
+                }
+                
+                if (seg.visualDescription) {
+                    doc.setFontSize(7);
+                    setColor(lightGray);
+                    doc.text('VISUAL DESCRIPTION', margin + 5, innerY);
+                    innerY += 4;
+                    doc.setFontSize(9);
+                    setColor([85, 85, 85]);
+                    const descLines = doc.splitTextToSize(seg.visualDescription, contentWidth - 15);
+                    doc.text(descLines.slice(0, 2), margin + 5, innerY);
+                }
+                
+                y += segHeight + 5;
+            });
+            
+            // References
+            if (uploadedFiles.length > 0 || referenceLinks) {
+                if (y > 250) {
+                    doc.addPage();
+                    y = margin;
+                }
+                
+                y += 5;
+                doc.setFontSize(9);
+                setColor(lightGray);
+                doc.text('REFERENCES', margin, y);
+                y += 6;
+                
+                if (uploadedFiles.length > 0) {
+                    doc.setFontSize(9);
+                    setColor(darkGray);
+                    doc.text('Files: ' + uploadedFiles.map(f => f.name).join(', '), margin, y);
+                    y += 6;
+                }
+                
+                if (referenceLinks) {
+                    doc.setFontSize(8);
+                    setColor([85, 85, 85]);
+                    const linkLines = doc.splitTextToSize(referenceLinks, contentWidth);
+                    doc.text(linkLines.slice(0, 5), margin, y);
+                }
+            }
+            
+            // Footer
+            const footerY = 285;
+            doc.setDrawColor(238, 238, 238);
+            doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+            
+            // Save
+            doc.save(projectName.replace(/[^a-z0-9]/gi, '_') + '_brief.pdf');
         }
 
         // Start with one segment
