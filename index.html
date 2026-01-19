@@ -604,6 +604,7 @@
             transform: translateX(-50%);
             z-index: 2;
             transition: transform 0.1s;
+            touch-action: none;
         }
 
         .slider-handle:hover {
@@ -772,11 +773,118 @@
 
         /* Responsive */
         @media (max-width: 600px) {
+            .container {
+                padding: 20px 16px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .section {
+                padding: 16px;
+            }
+
             .form-row {
                 grid-template-columns: 1fr;
             }
+
             .easing-options {
                 grid-template-columns: 1fr;
+            }
+
+            .company-toggle {
+                flex-direction: column;
+            }
+
+            .company-toggle button {
+                padding: 12px 16px;
+            }
+
+            .mood-tags {
+                gap: 8px;
+            }
+
+            .mood-tag {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .format-option {
+                padding: 12px;
+            }
+
+            .format-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+
+            .format-timeline {
+                height: 20px;
+            }
+
+            .format-segment {
+                font-size: 7px;
+            }
+
+            .slider-handle {
+                width: 24px;
+                height: 24px;
+            }
+
+            .slider-wrapper {
+                height: 40px;
+            }
+
+            .segment {
+                padding: 16px;
+            }
+
+            .segment-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .segment-delete {
+                margin-left: 0;
+            }
+
+            .price-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .price-duration {
+                text-align: left;
+            }
+
+            .price-breakdown {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .price-estimate-wrapper {
+                text-align: left;
+            }
+
+            .price-value {
+                font-size: 24px;
+            }
+
+            .file-upload {
+                padding: 24px 16px;
+            }
+
+            .easing-preview {
+                height: 50px;
+            }
+
+            .easing-ball {
+                width: 10px;
+                height: 10px;
             }
         }
     </style>
@@ -1238,15 +1346,22 @@
                 handles.forEach(handle => {
                     if (handle.classList.contains('disabled')) return;
                     
-                    handle.onmousedown = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
+                    const handleDrag = (startEvent) => {
+                        startEvent.preventDefault();
+                        startEvent.stopPropagation();
                         
                         const handleType = handle.dataset.type;
                         
-                        const onMouseMove = (e) => {
+                        const getClientX = (e) => {
+                            if (e.touches && e.touches.length > 0) {
+                                return e.touches[0].clientX;
+                            }
+                            return e.clientX;
+                        };
+                        
+                        const onMove = (e) => {
                             const rect = wrapper.getBoundingClientRect();
-                            let percent = (e.clientX - rect.left) / rect.width;
+                            let percent = (getClientX(e) - rect.left) / rect.width;
                             percent = Math.max(0, Math.min(1, percent));
                             const rawTime = percent * MAX_DURATION;
                             const time = Math.round(rawTime * 2) / 2;
@@ -1273,15 +1388,22 @@
                             updateSliderUI(wrapper, segment, index);
                         };
 
-                        const onMouseUp = () => {
-                            document.removeEventListener('mousemove', onMouseMove);
-                            document.removeEventListener('mouseup', onMouseUp);
+                        const onEnd = () => {
+                            document.removeEventListener('mousemove', onMove);
+                            document.removeEventListener('mouseup', onEnd);
+                            document.removeEventListener('touchmove', onMove);
+                            document.removeEventListener('touchend', onEnd);
                             renderSegments();
                         };
 
-                        document.addEventListener('mousemove', onMouseMove);
-                        document.addEventListener('mouseup', onMouseUp);
+                        document.addEventListener('mousemove', onMove);
+                        document.addEventListener('mouseup', onEnd);
+                        document.addEventListener('touchmove', onMove, { passive: false });
+                        document.addEventListener('touchend', onEnd);
                     };
+                    
+                    handle.onmousedown = handleDrag;
+                    handle.ontouchstart = handleDrag;
                 });
             });
         }
